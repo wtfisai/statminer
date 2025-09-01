@@ -5,6 +5,11 @@ const nextConfig = {
   experimental: {
     serverComponentsExternalPackages: ['neo4j-driver'],
   },
+  output: 'export',
+  trailingSlash: true,
+  images: {
+    unoptimized: true,
+  },
   webpack: (config, { isServer }) => {
     // Add WebSocket polyfill for client-side
     if (!isServer) {
@@ -21,10 +26,8 @@ const nextConfig = {
   env: {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
   },
-  // PWA support
-  ...{
-    trailingSlash: false,
-  }
+  // Firebase Hosting requires static export
+  distDir: 'out',
 };
 
 // Sentry configuration

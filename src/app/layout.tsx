@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import { Analytics } from '@vercel/analytics/react';
+import PWAProvider from '@/components/PWAProvider';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -13,6 +14,11 @@ export const metadata: Metadata = {
   viewport: 'width=device-width, initial-scale=1',
   themeColor: '#06b6d4',
   manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'StatMiner',
+  },
 };
 
 export default function RootLayout({
@@ -25,9 +31,17 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/favicon.ico" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-title" content="StatMiner" />
+        <meta name="msapplication-TileImage" content="/icon-144.png" />
+        <meta name="msapplication-TileColor" content="#06b6d4" />
       </head>
       <body className={inter.className}>
-        {children}
+        <PWAProvider>
+          {children}
+        </PWAProvider>
         <Analytics />
       </body>
     </html>
