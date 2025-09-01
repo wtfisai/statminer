@@ -4,7 +4,8 @@
       "Bash(gh auth:*)",
       "Bash(git init:*)",
       "Bash(npm install:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git tag:*)"
     ],
     "deny": [],
     "ask": []
