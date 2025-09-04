@@ -2,33 +2,27 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project: StatMiner/StatNerd - Multi-Model Data Aggregator
+## Project: StatMiner - Multi-Model AI Chat Aggregator
 
-A comprehensive web-based data aggregator chatbot that provides statistics without commentary, integrating multiple LLM services, government/research databases, and Neo4j neural network visualization.
+A comprehensive web application that provides multi-agent AI chat interfaces, integrating multiple LLM providers (OpenAI, Anthropic, OpenRouter, Grok) with Neo4j graph database for data visualization and management.
 
 ## Commands
 
 ### Development
 ```bash
-npm run dev        # Start development server on localhost:3000
-npm run build      # Build for production
+npm run dev        # Start Next.js development server on localhost:3000
+npm run build      # Build for production (exports to /out for static hosting)
 npm run start      # Run production build locally
-npm run lint       # Run linting
+npm run lint       # Run ESLint
 ```
 
-### Firebase Deployment (if using Firebase)
+### Firebase Deployment
 ```bash
-npm run firebase:serve          # Start Firebase emulators
-npm run firebase:deploy         # Build and deploy everything
+npm run firebase:serve          # Start Firebase emulators (hosting:5000, firestore:8080, auth:9099, UI:4000)
+npm run firebase:deploy         # Build and deploy everything to Firebase
 npm run firebase:deploy:hosting # Deploy only hosting
 npm run firebase:deploy:functions # Deploy only functions
-npm run functions:logs          # View function logs
-```
-
-### Vercel Deployment
-```bash
-vercel         # Deploy to Vercel (requires CLI: npm i -g vercel)
-vercel --prod  # Deploy to production
+npm run functions:logs          # View Firebase function logs
 ```
 
 ### Testing
@@ -37,52 +31,85 @@ No test framework currently configured. When adding tests, update this section w
 ## Architecture
 
 ### Tech Stack
-- **Framework**: Next.js 14 with App Router, TypeScript, Tailwind CSS
-- **Database**: Neo4j (graph database for neural network visualization)
-- **LLM Providers**: OpenAI, Anthropic Claude, OpenRouter, Grok, Requesty
-- **State Management**: Zustand
-- **UI Components**: Radix UI primitives with custom styling
-- **Visualization**: D3.js, Chart.js, react-d3-graph for network graphs
-- **Deployment**: Vercel (primary) or Firebase (alternative)
+- **Framework**: Next.js 14 with App Router, TypeScript
+- **Styling**: Tailwind CSS with Radix UI primitives
+- **Database**: Neo4j graph database
+- **State Management**: Zustand stores
+- **Real-time**: WebSocket connections for streaming chat
+- **Visualization**: D3.js, Chart.js, react-d3-graph
+- **Animation**: Framer Motion
+- **Monitoring**: Sentry integration
+- **PWA**: Service worker and offline support
 
-### Core Modules
+### Key Architecture Patterns
 
-#### LLM Provider Integration (`src/lib/llm-providers/`)
-- Unified interface for multiple AI models
-- Parallel query execution across models
-- Response comparison and aggregation
-- Streaming support where available
+#### Multi-Provider LLM Integration (`src/lib/llm-providers/`)
+The system implements a unified interface for multiple LLM providers with:
+- Provider-specific classes (OpenAIProvider, AnthropicProvider, etc.)
+- Parallel execution across all selected providers using Promise.allSettled
+- Both streaming and batch response modes
+- Automatic retry logic and error handling
+- Cost tracking and token usage monitoring
 
-#### Database Connectors (`src/lib/database-connectors/`)
-- 50+ pre-configured API integrations
-- Categories: government, academic, commercial, healthcare, financial
-- Automatic rate limiting and retry logic
-- Caching with Vercel KV
+#### Multi-Agent Chat Interface (`src/components/MultiAgentChat.tsx`)
+Core chat interface supports three view modes:
+- **Tabs**: Switch between individual agent conversations
+- **Quad**: 2x2 grid showing 4 agents simultaneously  
+- **Comparison**: Side-by-side response comparison
 
-#### Neo4j Integration (`src/lib/neo4j-client/`)
-- CRUD operations for neural network datasets
-- Cypher query support
-- Graph visualization data preparation
-- Dataset versioning and metadata
+#### WebSocket Streaming (`src/app/api/ws/chat/`)
+Real-time streaming implementation:
+- WebSocket endpoint for live chat responses
+- Server-sent events for streaming from multiple providers
+- Connection management with reconnection logic
+- Session persistence across connections
 
-#### Citation System (`src/lib/citation-formatter/`)
-- MLA 9th edition formatting
-- Automatic citation generation from API responses
-- Works Cited page compilation
-- Support for web, journal, book, database, and API sources
+#### Queue System (`src/lib/queue/queue-manager.ts`)
+Bull-based job queue for:
+- Chat message processing
+- Database operations
+- Background tasks with retry logic
+- Redis-backed persistence
 
-### API Routes Structure
-- `/api/chat` - Multi-model chat endpoint with streaming
-- `/api/neo4j/*` - Neo4j database operations
-- `/api/databases/[id]/query` - Dynamic database querying
-- `/api/citations/format` - Citation formatting service
-- `/api/visualizations/generate` - Data visualization generation
+#### Neo4j Integration (`src/lib/neo4j/backup-manager.ts`)
+Graph database operations:
+- Dataset backup and restoration
+- Node and relationship CRUD operations
+- Cypher query execution
+- Visualization data preparation
 
-## Environment Configuration
+### Type System (`src/types/index.ts`)
 
-Required environment variables (create `.env.local`):
+Comprehensive TypeScript interfaces including:
+- **LLMProvider**: Provider configuration and metadata
+- **ChatMessage & ChatSession**: Message and conversation state
+- **AgentTab**: Multi-agent UI state management
+- **Neo4jDataset**: Graph data structures
+- **QueuedJob**: Background job definitions
+- **WebSocketMessage**: Real-time communication
+- **UserSession & UserPreferences**: User state persistence
+
+All types use Zod for runtime validation.
+
+## Build Configuration
+
+### Static Export Setup (`next.config.js`)
+- Configured for static export (`output: 'export'`) for Firebase hosting
+- Neo4j driver externalized for server components
+- WebSocket polyfills for client-side compatibility
+- Sentry integration for error tracking
+
+### Firebase Configuration (`firebase.json`)
+- Static hosting from `/out` directory
+- Function deployment with Node.js 18
+- Firestore and Storage rules
+- Emulator suite for local development
+
+## Environment Variables
+
+Required in `.env.local`:
 ```bash
-# Neo4j (Required)
+# Neo4j Database (Required)
 NEO4J_URI=neo4j+s://[instance].databases.neo4j.io
 NEO4J_USER=neo4j
 NEO4J_PASSWORD=[password]
@@ -91,65 +118,33 @@ NEO4J_PASSWORD=[password]
 OPENAI_API_KEY=sk-...
 ANTHROPIC_API_KEY=sk-ant-...
 OPENROUTER_API_KEY=sk-or-...
+GROK_API_KEY=...
 
-# NextAuth (Required for production)
-NEXTAUTH_URL=https://[your-app].vercel.app
-NEXTAUTH_SECRET=[generate with: openssl rand -base64 32]
+# NextAuth (Required for auth)
+NEXTAUTH_URL=https://your-app.vercel.app
+NEXTAUTH_SECRET=[32+ char secret]
 
-# Government/Academic APIs (optional)
-CENSUS_API_KEY=...
-BLS_API_KEY=...
-FRED_API_KEY=...
+# Monitoring (Optional)
+SENTRY_ORG=...
+SENTRY_PROJECT=...
 ```
 
-## Key Design Patterns
+## Development Guidelines
 
-1. **Parallel Model Queries**: All LLM requests are executed concurrently using Promise.all
-2. **Type Safety**: Comprehensive TypeScript interfaces in `src/types/index.ts`
-3. **Error Boundaries**: Each API route has try-catch with detailed error responses
-4. **Rate Limiting**: Built-in rate limiting for external API calls
-5. **Caching Strategy**: Vercel KV for API responses, localStorage for user preferences
+### Adding New LLM Providers
+1. Add provider class to `src/lib/llm-providers/index.ts` implementing the ProviderRequest interface
+2. Update PROVIDERS registry and provider configuration array
+3. Add API key handling in environment schema
+4. Test both streaming and batch modes
 
-## UI/UX Guidelines
+### Modifying Chat Interface
+The chat system is built around the AgentTab concept - each provider gets its own tab/panel:
+- Update `MultiAgentChat.tsx` for UI changes
+- Modify `useChatStore` for state management
+- WebSocket message handling in `useWebSocket` hook
 
-- **Theme**: Dark mode with glass morphism effects
-- **Colors**: Cyan/blue gradient accents (#06b6d4 to #3b82f6)
-- **Typography**: Inter font family
-- **Animations**: Framer Motion for smooth transitions
-- **Responsive**: Mobile-first design approach
-
-## Database API Configurations
-
-Pre-configured in `src/types/index.ts` as `DATABASE_CONFIGS`:
-- Government: Census, BLS, FRED, CDC, NOAA, etc.
-- Academic: PubMed, arXiv, CrossRef, Semantic Scholar
-- Financial: World Bank, IMF, Yahoo Finance
-- International: UN Data, Eurostat, OECD
-
-## Security Considerations
-
-- API keys stored in environment variables only
-- No client-side exposure of sensitive credentials
-- CORS properly configured for API routes
-- Input validation on all user inputs
-- SQL injection prevention in Cypher queries
-
-## Common Development Tasks
-
-### Adding a New LLM Provider
-1. Add provider configuration to `src/lib/llm-providers/index.ts`
-2. Implement provider-specific API client
-3. Add to model selection UI in settings panel
-4. Update TypeScript types in `src/types/index.ts`
-
-### Adding a New Database API
-1. Add configuration to `DATABASE_CONFIGS` in `src/types/index.ts`
-2. Create connector in `src/lib/database-connectors/`
-3. Add to database panel UI
-4. Document API requirements and rate limits
-
-### Modifying Neo4j Schema
-1. Update dataset interfaces in `src/types/index.ts`
-2. Modify CRUD operations in `src/lib/neo4j-client/`
-3. Update visualization components if needed
-4. Test with existing datasets for compatibility
+### Neo4j Schema Changes
+1. Update interfaces in `src/types/index.ts`
+2. Modify backup manager for new data structures
+3. Update visualization components for new node/relationship types
+4. Test data migration compatibility
